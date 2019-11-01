@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClassName = "hackerrank.BeautifulTripletsKt"
+    mainClassName = "hackerrank.MinimumDistancesKt"
 }
 
 repositories {
