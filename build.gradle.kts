@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClassName = "hackerrank.MinimumDistancesKt"
+    mainClassName = "adventofcode.Day1Kt"
 }
 
 repositories {
