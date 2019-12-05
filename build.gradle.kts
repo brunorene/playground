@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClassName = "adventofcode.day3.MainKt"
+    mainClassName = "adventofcode.day4.MainKt"
 }
 
 repositories {
