@@ -19,25 +19,24 @@ fun computer(memory: MutableList<Int>): MutableList<Int> {
 }
 
 fun day2star1() {
-    val memory = File("day2.txt")
-            .readText()
-            .replace("\n", "")
-            .split(",")
-            .map { it.toInt() }
-            .toMutableList()
+    val memory = readProgram()
     memory[1] = 12
     memory[2] = 2
     val result = computer(memory)
     println(result[0])
 }
 
-fun day2star2() {
-    val memory = File("day2.txt")
+private fun readProgram(): MutableList<Int> {
+    return File("day2.txt")
             .readText()
             .replace("\n", "")
             .split(",")
             .map { it.toInt() }
-            .toList()
+            .toMutableList()
+}
+
+fun day2star2() {
+    val memory = readProgram()
     val (noun, verb) = (0..99)
             .flatMap { n ->
                 (0..99).map { v -> n to v }
