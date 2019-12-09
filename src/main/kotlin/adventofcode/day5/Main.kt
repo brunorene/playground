@@ -1,9 +1,11 @@
 package adventofcode.day5
 
 import java.io.File
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 
 fun main() {
-//    day5star1()
+    day5star1()
     day5star2()
 }
 
@@ -33,7 +35,7 @@ class Immediate(private val index: Int) : Mode() {
     override fun value(memory: List<Int>, opIdx: Int) = memory[opIdx + index]
 }
 
-fun computer(memory: MutableList<Int>, input: Int): MutableList<Int> {
+fun <R : Any> computer(memory: MutableList<Int>, input: BlockingQueue<Int>, outputHandler: (Int) -> R? = { null }) {
     var opIdx = 0
     while (opcode(memory[opIdx]).code != 99) {
         val opCode = opcode(memory[opIdx])
@@ -49,11 +51,11 @@ fun computer(memory: MutableList<Int>, input: Int): MutableList<Int> {
                 opIdx += 4
             }
             3 -> { // input
-                memory[memory[opIdx + 1]] = input
+                memory[memory[opIdx + 1]] = input.take()
                 opIdx += 2
             }
             4 -> { // output
-                println(memory[memory[opIdx + 1]])
+                outputHandler(memory[memory[opIdx + 1]])
                 opIdx += 2
             }
             5 -> { // jump-if-true
@@ -72,15 +74,14 @@ fun computer(memory: MutableList<Int>, input: Int): MutableList<Int> {
             }
         }
     }
-    return memory
 }
 
 fun day5star1() {
-    computer(readProgram(), 1)
+    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Int>(1).apply { add(1) }) { println(it) }
 }
 
-private fun readProgram(): MutableList<Int> {
-    return File("day5.txt")
+fun readProgram(file: File): MutableList<Int> {
+    return file
             .readText()
             .replace("\n", "")
             .split(",")
@@ -89,5 +90,5 @@ private fun readProgram(): MutableList<Int> {
 }
 
 fun day5star2() {
-    computer(readProgram(), 5)
+    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Int>(1).apply { add(5) }) { println(it) }
 }

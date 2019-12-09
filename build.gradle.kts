@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClassName = "adventofcode.day6.MainKt"
+    mainClassName = "adventofcode.day7.MainKt"
 }
 
 repositories {
@@ -18,6 +18,7 @@ dependencies {
     implementation("com.cronutils:cron-utils:8.0.0")
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.0.0")
+    implementation("com.marcinmoskala:DiscreteMathToolkit:1.0.3")
 }
 
 tasks.withType<KotlinCompile> {
