@@ -11,84 +11,106 @@ fun main() {
 
 data class OpCode(val code: Int, val modes: Triple<Mode, Mode, Mode>)
 
-fun opcode(code: Int): OpCode {
+fun opcode(code: Long?, base: Long): OpCode {
+    if (code == null)
+        throw RuntimeException("no operation code!")
     val completeCode = code.toString().padStart(5, '0')
+
+    val chooseMode = { c: Char, p: Long ->
+        when (c) {
+            '0' -> Position(p)
+            '1' -> Immediate(p)
+            '2' -> Relative(p, base)
+            else -> throw RuntimeException("Unknown memory mode")
+        }
+    }
+
     return OpCode(
             completeCode.substring(3).toInt(),
             Triple(
-                    if (completeCode[2] == '0') Position(1) else Immediate(1),
-                    if (completeCode[1] == '0') Position(2) else Immediate(2),
-                    if (completeCode[0] == '0') Position(3) else Immediate(3)
+                    chooseMode(completeCode[2], 1),
+                    chooseMode(completeCode[1], 2),
+                    chooseMode(completeCode[0], 3)
             )
     )
 }
 
 sealed class Mode {
-    abstract fun value(memory: List<Int>, opIdx: Int): Int
+    abstract fun value(memory: MutableMap<Long, Long>, opIdx: Long): Long
 }
 
-class Position(private val index: Int) : Mode() {
-    override fun value(memory: List<Int>, opIdx: Int) = memory[memory[opIdx + index]]
+class Position(private val index: Long) : Mode() {
+    override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
+            memory[memory[opIdx + index]] ?: 0
 }
 
-class Immediate(private val index: Int) : Mode() {
-    override fun value(memory: List<Int>, opIdx: Int) = memory[opIdx + index]
+class Immediate(private val index: Long) : Mode() {
+    override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
+            memory[opIdx + index] ?: 0
 }
 
-fun <R : Any> computer(memory: MutableList<Int>, input: BlockingQueue<Int>, outputHandler: (Int) -> R? = { null }) {
-    var opIdx = 0
-    while (opcode(memory[opIdx]).code != 99) {
-        val opCode = opcode(memory[opIdx])
+class Relative(private val index: Long, private val base: Long) : Mode() {
+    override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
+            memory[memory[opIdx + index]!! + base] ?: 0
+}
+
+fun computer(memory: MutableMap<Long, Long>, input: BlockingQueue<Long>, outputHandler: (Long) -> Unit = { }) {
+    var opIdx = 0L
+    var relativeBase = 0L
+    while (opcode(memory[opIdx], relativeBase).code != 99) {
+        val opCode = opcode(memory[opIdx], relativeBase)
         val mode1 = opCode.modes.first::value
         val mode2 = opCode.modes.second::value
         when (opCode.code) {
             1 -> { // add
-                memory[memory[opIdx + 3]] = mode1(memory, opIdx) + mode2(memory, opIdx)
+                memory[memory[opIdx + 3]!!] = mode1(memory, opIdx) + mode2(memory, opIdx)
                 opIdx += 4
             }
             2 -> { // multiply
-                memory[memory[opIdx + 3]] = mode1(memory, opIdx) * mode2(memory, opIdx)
+                memory[memory[opIdx + 3]!!] = mode1(memory, opIdx) * mode2(memory, opIdx)
                 opIdx += 4
             }
             3 -> { // input
-                memory[memory[opIdx + 1]] = input.take()
+                memory[memory[opIdx + 1]!!] = input.take()
                 opIdx += 2
             }
             4 -> { // output
-                outputHandler(memory[memory[opIdx + 1]])
+                outputHandler(mode1(memory, opIdx))
                 opIdx += 2
             }
             5 -> { // jump-if-true
-                opIdx = if (mode1(memory, opIdx) != 0) mode2(memory, opIdx) else opIdx + 3
+                opIdx = if (mode1(memory, opIdx) != 0L) mode2(memory, opIdx) else opIdx + 3
             }
             6 -> { // jump-if-false
-                opIdx = if (mode1(memory, opIdx) == 0) mode2(memory, opIdx) else opIdx + 3
+                opIdx = if (mode1(memory, opIdx) == 0L) mode2(memory, opIdx) else opIdx + 3
             }
             7 -> { // less-than
-                memory[memory[opIdx + 3]] = if (mode1(memory, opIdx) < mode2(memory, opIdx)) 1 else 0
+                memory[memory[opIdx + 3]!!] = if (mode1(memory, opIdx) < mode2(memory, opIdx)) 1L else 0L
                 opIdx += 4
             }
             8 -> { // equals
-                memory[memory[opIdx + 3]] = if (mode1(memory, opIdx) == mode2(memory, opIdx)) 1 else 0
+                memory[memory[opIdx + 3]!!] = if (mode1(memory, opIdx) == mode2(memory, opIdx)) 1L else 0L
                 opIdx += 4
+            }
+            9 -> { // change relative base
+                relativeBase += memory[opIdx + 1] ?: 0
+                opIdx += 2
             }
         }
     }
 }
 
 fun day5star1() {
-    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Int>(1).apply { add(1) }) { println(it) }
+    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Long>(1).apply { add(1L) }) { println(it) }
 }
 
-fun readProgram(file: File): MutableList<Int> {
-    return file
-            .readText()
-            .replace("\n", "")
-            .split(",")
-            .map { it.toInt() }
-            .toMutableList()
-}
+fun readProgram(file: File) = file
+        .readText()
+        .replace("\n", "")
+        .split(",")
+        .mapIndexed { index, s -> index.toLong() to s.toLong() }
+        .toMap(mutableMapOf())
 
 fun day5star2() {
-    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Int>(1).apply { add(5) }) { println(it) }
+    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Long>(1).apply { add(5L) }) { println(it) }
 }
