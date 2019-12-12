@@ -37,66 +37,75 @@ fun opcode(code: Long?, base: Long): OpCode {
 
 sealed class Mode {
     abstract fun value(memory: MutableMap<Long, Long>, opIdx: Long): Long
+    abstract fun set(memory: MutableMap<Long, Long>, opIdx: Long, value: Long)
 }
 
-class Position(private val index: Long) : Mode() {
+open class Position(private val index: Long) : Mode() {
     override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
             memory[memory[opIdx + index]] ?: 0
+
+    override fun set(memory: MutableMap<Long, Long>, opIdx: Long, value: Long) {
+        memory[opIdx + index]?.let {
+            memory[it] = value
+        }
+    }
 }
 
-class Immediate(private val index: Long) : Mode() {
+class Immediate(private val index: Long) : Position(index) {
     override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
             memory[opIdx + index] ?: 0
 }
 
 class Relative(private val index: Long, private val base: Long) : Mode() {
     override fun value(memory: MutableMap<Long, Long>, opIdx: Long) =
-            memory[memory[opIdx + index]!! + base] ?: 0
+            memory[opIdx + index]?.let { memory[it + base] } ?: 0
+
+    override fun set(memory: MutableMap<Long, Long>, opIdx: Long, value: Long) {
+        memory[opIdx + index]?.let {
+            memory[it + base] = value
+        }
+    }
 }
 
 fun computer(memory: MutableMap<Long, Long>, input: BlockingQueue<Long>, outputHandler: (Long) -> Unit = { }) {
     var opIdx = 0L
     var relativeBase = 0L
-    while (opcode(memory[opIdx], relativeBase).code != 99) {
-        val opCode = opcode(memory[opIdx], relativeBase)
-        val mode1 = opCode.modes.first::value
-        val mode2 = opCode.modes.second::value
+    var opCode = opcode(memory[opIdx], relativeBase)
+    while (opCode.code != 99) {
+        val get1 = opCode.modes.first::value
+        val get2 = opCode.modes.second::value
+        val set1 = opCode.modes.first::set
+        val set3 = opCode.modes.third::set
         when (opCode.code) {
             1 -> { // add
-                memory[memory[opIdx + 3]!!] = mode1(memory, opIdx) + mode2(memory, opIdx)
-                opIdx += 4
+                set3(memory, opIdx, get1(memory, opIdx) + get2(memory, opIdx)); opIdx += 4
             }
             2 -> { // multiply
-                memory[memory[opIdx + 3]!!] = mode1(memory, opIdx) * mode2(memory, opIdx)
-                opIdx += 4
+                set3(memory, opIdx, get1(memory, opIdx) * get2(memory, opIdx)); opIdx += 4
             }
             3 -> { // input
-                memory[memory[opIdx + 1]!!] = input.take()
-                opIdx += 2
+                set1(memory, opIdx, input.take()); opIdx += 2
             }
             4 -> { // output
-                outputHandler(mode1(memory, opIdx))
-                opIdx += 2
+                outputHandler(get1(memory, opIdx)); opIdx += 2
             }
             5 -> { // jump-if-true
-                opIdx = if (mode1(memory, opIdx) != 0L) mode2(memory, opIdx) else opIdx + 3
+                opIdx = if (get1(memory, opIdx) != 0L) get2(memory, opIdx) else opIdx + 3
             }
             6 -> { // jump-if-false
-                opIdx = if (mode1(memory, opIdx) == 0L) mode2(memory, opIdx) else opIdx + 3
+                opIdx = if (get1(memory, opIdx) == 0L) get2(memory, opIdx) else opIdx + 3
             }
             7 -> { // less-than
-                memory[memory[opIdx + 3]!!] = if (mode1(memory, opIdx) < mode2(memory, opIdx)) 1L else 0L
-                opIdx += 4
+                set3(memory, opIdx, if (get1(memory, opIdx) < get2(memory, opIdx)) 1L else 0L); opIdx += 4
             }
             8 -> { // equals
-                memory[memory[opIdx + 3]!!] = if (mode1(memory, opIdx) == mode2(memory, opIdx)) 1L else 0L
-                opIdx += 4
+                set3(memory, opIdx, if (get1(memory, opIdx) == get2(memory, opIdx)) 1L else 0L); opIdx += 4
             }
             9 -> { // change relative base
-                relativeBase += memory[opIdx + 1] ?: 0
-                opIdx += 2
+                relativeBase += get1(memory, opIdx); opIdx += 2
             }
         }
+        opCode = opcode(memory[opIdx], relativeBase)
     }
 }
 

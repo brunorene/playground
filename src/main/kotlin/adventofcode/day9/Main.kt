@@ -16,5 +16,5 @@ fun day9star1() {
 
 
 fun day9star2() {
-
+    computer(readProgram(File("day9.txt")), LinkedBlockingQueue<Long>(1).apply { add(2L) }) { println(it) }
 }
