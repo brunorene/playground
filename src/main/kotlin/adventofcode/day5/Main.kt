@@ -1,8 +1,8 @@
 package adventofcode.day5
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
 
 fun main() {
     day5star1()
@@ -67,7 +67,7 @@ class Relative(private val index: Long, private val base: Long) : Mode() {
     }
 }
 
-fun computer(memory: MutableMap<Long, Long>, input: BlockingQueue<Long>, outputHandler: (Long) -> Unit = { }) {
+suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long>, outputHandler: suspend (Long) -> Unit = { }) {
     var opIdx = 0L
     var relativeBase = 0L
     var opCode = opcode(memory[opIdx], relativeBase)
@@ -84,7 +84,7 @@ fun computer(memory: MutableMap<Long, Long>, input: BlockingQueue<Long>, outputH
                 set3(memory, opIdx, get1(memory, opIdx) * get2(memory, opIdx)); opIdx += 4
             }
             3 -> { // input
-                set1(memory, opIdx, input.take()); opIdx += 2
+                set1(memory, opIdx, input.receive()); opIdx += 2
             }
             4 -> { // output
                 outputHandler(get1(memory, opIdx)); opIdx += 2
@@ -110,7 +110,9 @@ fun computer(memory: MutableMap<Long, Long>, input: BlockingQueue<Long>, outputH
 }
 
 fun day5star1() {
-    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Long>(1).apply { add(1L) }) { println(it) }
+    runBlocking {
+        computer(readProgram(File("day5.txt")), Channel<Long>(1).apply { send(1L) }) { println(it) }
+    }
 }
 
 fun readProgram(file: File) = file
@@ -121,5 +123,7 @@ fun readProgram(file: File) = file
         .toMap(mutableMapOf())
 
 fun day5star2() {
-    computer(readProgram(File("day5.txt")), LinkedBlockingQueue<Long>(1).apply { add(5L) }) { println(it) }
+    runBlocking {
+        computer(readProgram(File("day5.txt")), Channel<Long>(1).apply { send(5L) }) { println(it) }
+    }
 }

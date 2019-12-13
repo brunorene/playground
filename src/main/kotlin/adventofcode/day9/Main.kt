@@ -2,8 +2,9 @@ package adventofcode.day9
 
 import adventofcode.day5.computer
 import adventofcode.day5.readProgram
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.util.concurrent.LinkedBlockingQueue
 
 fun main() {
     day9star1()
@@ -11,10 +12,14 @@ fun main() {
 }
 
 fun day9star1() {
-    computer(readProgram(File("day9.txt")), LinkedBlockingQueue<Long>(1).apply { add(1L) }) { println(it) }
+    runBlocking {
+        computer(readProgram(File("day9.txt")), Channel<Long>(1).apply { send(1L) }) { println(it) }
+    }
 }
 
 
 fun day9star2() {
-    computer(readProgram(File("day9.txt")), LinkedBlockingQueue<Long>(1).apply { add(2L) }) { println(it) }
+    runBlocking {
+        computer(readProgram(File("day9.txt")), Channel<Long>(1).apply { send(2L) }) { println(it) }
+    }
 }
