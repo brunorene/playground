@@ -67,7 +67,7 @@ class Relative(private val index: Long, private val base: Long) : Mode() {
     }
 }
 
-suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long>, outputHandler: suspend (Long) -> Unit = { }) {
+suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long> = Channel(1), outputHandler: suspend (Long) -> Unit = { }) {
     var opIdx = 0L
     var relativeBase = 0L
     var opCode = opcode(memory[opIdx], relativeBase)
