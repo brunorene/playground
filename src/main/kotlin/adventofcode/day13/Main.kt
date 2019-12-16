@@ -2,8 +2,10 @@ package adventofcode.day13
 
 import adventofcode.day5.computer
 import adventofcode.day5.readProgram
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.lang.Long.max
 
 fun main() {
     day13star1()
@@ -33,12 +35,12 @@ var screen = mutableMapOf<Point, Tile>()
 fun day13star1() {
     runBlocking {
         val memory = readProgram(File("day13.txt"))
-        var buffer = listOf<Long>()
+        val buffer = mutableListOf<Long>()
         computer(memory) {
-            buffer += it
+            buffer.add(it)
             if (buffer.size == 3) {
                 screen[Point(buffer[0], buffer[1])] = tile(buffer[2])
-                buffer = listOf()
+                buffer.clear()
             }
         }
         println(screen.values.count { it == Block })
@@ -49,18 +51,31 @@ fun day13star2() {
     runBlocking {
         val memory = readProgram(File("day13.txt"))
         memory[0] = 2
-        var buffer = listOf<Long>()
-        computer(memory) {
-            buffer += it
+        val buffer = mutableListOf<Long>()
+        val channel = Channel<Long>(1000)
+        var maxScore = 0L
+        var paddleX = 0L
+        computer(memory, channel) {
+            buffer.add(it)
             if (buffer.size == 3) {
                 if (buffer[0] == -1L && buffer[1] == 0L) { //score
-
+                    maxScore = max(maxScore, buffer[2])
                 } else {
-                    screen[Point(buffer[0], buffer[1])] = tile(buffer[2])
+                    val tile = tile(buffer[2])
+                    if(tile == Paddle)
+                        paddleX = buffer[0]
+                    if(tile == Ball) {
+                        if (buffer[0] < paddleX)
+                            channel.send(-1L)
+                        if (buffer[0] > paddleX)
+                            channel.send(1L)
+                        if (buffer[0] == paddleX)
+                            channel.send(0)
+                    }
                 }
-                buffer = listOf()
+                buffer.clear()
             }
         }
-        println(screen.values.count { it == Block })
+        println(maxScore)
     }
 }
