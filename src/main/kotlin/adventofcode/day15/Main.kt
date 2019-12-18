@@ -15,10 +15,11 @@ fun main() {
 
 data class Point(val x: Long = 0, val y: Long = 0)
 
-sealed class Tile(val id: Long)
-object Wall : Tile(0)
-object Empty : Tile(1)
-object Oxygen : Tile(2)
+sealed class Tile(val char: Char)
+object Wall : Tile('#')
+object Empty : Tile('.')
+object Oxygen : Tile('X')
+object Unknown : Tile(' ')
 
 fun tile(id: Long) = when (id) {
     0L -> Empty
@@ -48,40 +49,73 @@ fun Point.nextPosition(dir: Direction) = when (dir) {
     East -> Point(x + 1, y)
 }
 
-fun randomDirection(exclude: Direction? = null): Direction {
-    var direction = direction(Random.nextLong(4) + 1L)
-    while (exclude != null && direction == exclude) {
-        direction = direction(Random.nextLong(4) + 1L)
+object Hull {
+    private val data = mutableMapOf<Point, Tile>()
+
+    private fun tilePlace(p: Point) = data[p] ?: Unknown
+
+    private fun allVisited(now: Point): Set<Direction> {
+        val directions = mutableSetOf<Direction>()
+        if (data.containsKey(now.nextPosition(North)))
+            directions.add(North)
+        if (data.containsKey(now.nextPosition(South)))
+            directions.add(South)
+        if (data.containsKey(now.nextPosition(West)))
+            directions.add(West)
+        if (data.containsKey(now.nextPosition(East)))
+            directions.add(East)
+        return directions
     }
-    return direction
+
+    fun set(p: Point, t: Tile) {
+        data[p] = t
+    }
+
+    fun draw() {
+        ((data.keys.map { it.y }.min() ?: 0) until (data.keys.map { it.y }.max() ?: 0)).forEach { y ->
+            ((data.keys.map { it.x }.min() ?: 0) until (data.keys.map { it.x }.max() ?: 0)).forEach { x ->
+                print(tilePlace(Point(x, y)).char)
+            }
+            println()
+        }
+    }
+
+    fun randomDirection(now: Point): Direction {
+        var direction = direction(Random.nextLong(4) + 1L)
+        if (allVisited(now).size < 4)
+            while (allVisited(now).contains(direction)) {
+                direction = direction(Random.nextLong(4) + 1L)
+            }
+        else
+            direction = direction(Random.nextLong(4) + 1L)
+        return direction
+    }
 }
 
 fun day15star1() {
     val memory = readProgram(File("day15.txt"))
     val channel = Channel<Long>(1000)
-    val hull = mutableMapOf<Point, Tile>()
     var currentPosition = Point()
     runBlocking {
-        var direction = randomDirection()
+        var direction = Hull.randomDirection(currentPosition)
         channel.send(direction.id)
         computer(memory, channel) {
             when (tile(it)) {
                 Wall -> {
                     val wallPos = currentPosition.nextPosition(direction)
-                    hull[wallPos] = Wall
-                    println("Found Wall on $wallPos")
-                    direction = randomDirection(direction)
+                    Hull.set(wallPos, Wall)
+                    direction = Hull.randomDirection(currentPosition)
                 }
                 Empty -> {
                     currentPosition = currentPosition.nextPosition(direction)
-                    hull[currentPosition] = Empty
-                    println("Found Empty on $currentPosition")
-                    direction = randomDirection()
+                    Hull.set(currentPosition, Empty)
+                    direction = Hull.randomDirection(currentPosition)
                 }
                 Oxygen -> {
                     currentPosition = currentPosition.nextPosition(direction)
-                    hull[currentPosition] = Oxygen
+                    Hull.set(currentPosition, Oxygen)
                     println("Found Oxygen Station on $currentPosition")
+                    Hull.draw()
                     exitProcess(0)
                 }
             }
