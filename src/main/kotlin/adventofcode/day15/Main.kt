@@ -2,11 +2,8 @@ package adventofcode.day15
 
 import adventofcode.day5.computer
 import adventofcode.day5.readProgram
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 fun main() {
@@ -95,10 +92,10 @@ suspend fun depthFirst(memory: MutableMap<Long, Long>, channel: Channel<Long>, c
         computer(memory, channel) { tileCode ->
             when (tile(tileCode)) {
                 Wall -> {
-                    Hull.set(current, Wall); println("Wall $next!")
+                    Hull.set(current, Wall)
+                    coroutineContext.cancel()
                 }
                 Empty -> {
-                    println("Empty $next!")
                     Hull.set(next, Empty)
                     next.neighbours()
                             .filter { Hull.tilePlace(it.second) == Unknown }
@@ -110,6 +107,7 @@ suspend fun depthFirst(memory: MutableMap<Long, Long>, channel: Channel<Long>, c
                 Oxygen -> {
                     Hull.set(next, Oxygen)
                     println("Found Oxygen Station on $next")
+                    coroutineContext.cancel()
                 }
             }
         }
