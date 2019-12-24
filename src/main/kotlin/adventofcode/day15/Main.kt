@@ -109,6 +109,7 @@ suspend fun depthFirst(memory: MutableMap<Long, Long>, channel: Channel<Long>, c
                     println("Found Oxygen Station on $next")
                     coroutineContext.cancel()
                 }
+                Unknown -> coroutineContext.cancel()
             }
         }
     }

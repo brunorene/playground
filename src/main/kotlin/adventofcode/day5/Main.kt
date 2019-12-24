@@ -67,10 +67,15 @@ class Relative(private val index: Long, private val base: Long) : Mode() {
     }
 }
 
-suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long> = Channel(1), outputHandler: suspend (Long) -> Unit = { }) {
+suspend fun <T : Any> computer(
+        memory: MutableMap<Long, Long>,
+        input: Channel<Long> = Channel(1),
+        outputHandler: suspend (Long) -> T? = { null }
+): List<T> {
     var opIdx = 0L
     var relativeBase = 0L
     var opCode = opcode(memory[opIdx], relativeBase)
+    val outList = mutableListOf<T?>()
     while (opCode.code != 99) {
         val get1 = opCode.modes.first::value
         val get2 = opCode.modes.second::value
@@ -87,7 +92,7 @@ suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long> = Chan
                 set1(memory, opIdx, input.receive()); opIdx += 2
             }
             4 -> { // output
-                outputHandler(get1(memory, opIdx)); opIdx += 2
+                outList.add(outputHandler(get1(memory, opIdx))); opIdx += 2
             }
             5 -> { // jump-if-true
                 opIdx = if (get1(memory, opIdx) != 0L) get2(memory, opIdx) else opIdx + 3
@@ -107,6 +112,7 @@ suspend fun computer(memory: MutableMap<Long, Long>, input: Channel<Long> = Chan
         }
         opCode = opcode(memory[opIdx], relativeBase)
     }
+    return outList.filterNotNull()
 }
 
 fun day5star1() {
