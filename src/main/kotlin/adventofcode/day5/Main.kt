@@ -3,6 +3,9 @@ package adventofcode.day5
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.util.*
+
+val NO_CHANNEL = Channel<Pair<Unit, Long>>(1)
 
 fun main() {
     day5star1()
@@ -67,15 +70,16 @@ class Relative(private val index: Long, private val base: Long) : Mode() {
     }
 }
 
-suspend fun <T : Any> computer(
+suspend fun <IN : Any, OUT : Any> computer(
         memory: MutableMap<Long, Long>,
-        input: Channel<Long> = Channel(1),
-        outputHandler: suspend (Long) -> T? = { null }
-): List<T> {
+        input: Channel<Pair<IN, Long>>,
+        outputHandler: suspend (Pair<Long, Stack<IN>>) -> OUT? = { null }
+): List<OUT> {
     var opIdx = 0L
     var relativeBase = 0L
     var opCode = opcode(memory[opIdx], relativeBase)
-    val outList = mutableListOf<T?>()
+    val outList = mutableListOf<OUT?>()
+    val stack = Stack<IN>()
     while (opCode.code != 99) {
         val get1 = opCode.modes.first::value
         val get2 = opCode.modes.second::value
@@ -89,10 +93,13 @@ suspend fun <T : Any> computer(
                 set3(memory, opIdx, get1(memory, opIdx) * get2(memory, opIdx)); opIdx += 4
             }
             3 -> { // input
-                set1(memory, opIdx, input.receive()); opIdx += 2
+                val data = input.receive()
+                if (data.first != Unit)
+                    stack.push(data.first)
+                set1(memory, opIdx, data.second); opIdx += 2
             }
             4 -> { // output
-                outList.add(outputHandler(get1(memory, opIdx))); opIdx += 2
+                outList.add(outputHandler(get1(memory, opIdx) to stack)); opIdx += 2
             }
             5 -> { // jump-if-true
                 opIdx = if (get1(memory, opIdx) != 0L) get2(memory, opIdx) else opIdx + 3
@@ -117,7 +124,10 @@ suspend fun <T : Any> computer(
 
 fun day5star1() {
     runBlocking {
-        computer(readProgram(File("day5.txt")), Channel<Long>(1).apply { send(1L) }) { println(it) }
+        computer(
+                readProgram(File("day5.txt")),
+                Channel<Pair<Unit, Long>>(1).apply { send(Unit to 1L) }
+        ) { println(it) }
     }
 }
 
@@ -130,6 +140,9 @@ fun readProgram(file: File) = file
 
 fun day5star2() {
     runBlocking {
-        computer(readProgram(File("day5.txt")), Channel<Long>(1).apply { send(5L) }) { println(it) }
+        computer(
+                readProgram(File("day5.txt")),
+                Channel<Pair<Unit, Long>>(1).apply { send(Unit to 5L) }
+        ) { println(it) }
     }
 }

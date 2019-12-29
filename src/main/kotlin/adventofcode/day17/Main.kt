@@ -23,7 +23,7 @@ fun day17star1() {
     val memory = readProgram(File("day17.txt"))
     val surfaceMap = mutableListOf<MutableList<Char>>(mutableListOf())
     runBlocking {
-        computer(memory, Channel(1)) { ascii ->
+        computer(memory, Channel<Pair<Unit, Long>>(1)) { (ascii, _) ->
             when (ascii) {
                 10L -> surfaceMap.add(mutableListOf())
                 else -> surfaceMap.last().add(ascii.toChar())

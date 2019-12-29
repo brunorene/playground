@@ -13,13 +13,13 @@ fun main() {
 
 fun day9star1() {
     runBlocking {
-        computer(readProgram(File("day9.txt")), Channel<Long>(1).apply { send(1L) }) { println(it) }
+        computer(readProgram(File("day9.txt")), Channel<Pair<Unit, Long>>(1).apply { send(Unit to 1L) }) { println(it) }
     }
 }
 
 
 fun day9star2() {
     runBlocking {
-        computer(readProgram(File("day9.txt")), Channel<Long>(1).apply { send(2L) }) { println(it) }
+        computer(readProgram(File("day9.txt")), Channel<Pair<Unit, Long>>(1).apply { send(Unit to 2L) }) { println(it) }
     }
 }

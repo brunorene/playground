@@ -18,15 +18,13 @@ fun day19star1() {
         println((0L..49L).flatMap { x ->
             (0L..49L).map { y ->
                 async {
-                    computer(memory.toMutableMap(), Channel<Long>(2).apply { send(x); send(y) }) { it }.first()
+                    computer(memory.toMutableMap(), Channel<Pair<Unit, Long>>(2)
+                            .apply { send(Unit to x); send(Unit to y) }) { it }.first()
                 }
             }
-        }.map { it.await() }.sum())
+        }.map { it.await().first }.sum())
     }
 }
-
-
-
 
 fun day19star2() {
     val memory = readProgram(File("day19.txt"))
@@ -34,9 +32,9 @@ fun day19star2() {
         println((0L..49L).flatMap { x ->
             (0L..49L).map { y ->
                 async {
-                    computer(memory.toMutableMap(), Channel<Long>(2).apply { send(x); send(y) }) { it }.first()
+                    computer(memory.toMutableMap(), Channel<Pair<Unit, Long>>(2).apply { send(Unit to x); send(Unit to y) }) { it }.first()
                 }
             }
-        }.map { it.await() }.sum())
+        }.map { it.await().first }.sum())
     }
 }

@@ -83,22 +83,22 @@ fun day11star1() {
         var robot = Robot()
         val hull = mutableMapOf<Point, Colour>()
         val painted = mutableSetOf<Point>()
-        val channel = Channel<Long>(1)
+        val channel = Channel<Pair<Unit, Long>>(1)
         val hullColour = { p: Point -> hull[p] ?: Black }
-        channel.send(Black.id)
+        channel.send(Unit to Black.id)
 
         computer(
                 readProgram(File("day11.txt")),
                 channel
-        ) {
+        ) { (out, _) ->
             if (isPaint) {
-                if (hullColour(robot.place) != Colour.get(it))
+                if (hullColour(robot.place) != Colour.get(out))
                     painted.add(robot.place)
-                hull[robot.place] = Colour.get(it)
+                hull[robot.place] = Colour.get(out)
                 isPaint = false
             } else {
-                robot = robot.turn(Turn.get(it)).move()
-                channel.send(hullColour(robot.place).id)
+                robot = robot.turn(Turn.get(out)).move()
+                channel.send(Unit to hullColour(robot.place).id)
                 isPaint = true
             }
         }
@@ -112,19 +112,19 @@ fun day11star2() {
         var robot = Robot()
         val hull = mutableMapOf<Point, Colour>()
         hull[Point()] = White
-        val channel = Channel<Long>(1)
+        val channel = Channel<Pair<Unit, Long>>(1)
         val hullColour = { p: Point -> hull[p] ?: Black }
-        channel.send(hullColour(robot.place).id)
+        channel.send(Unit to hullColour(robot.place).id)
         computer(
                 readProgram(File("day11.txt")),
                 channel
-        ) {
+        ) { (out, _) ->
             if (isPaint) {
-                hull[robot.place] = Colour.get(it)
+                hull[robot.place] = Colour.get(out)
                 isPaint = false
             } else {
-                robot = robot.turn(Turn.get(it)).move()
-                channel.send(hullColour(robot.place).id)
+                robot = robot.turn(Turn.get(out)).move()
+                channel.send(Unit to hullColour(robot.place).id)
                 isPaint = true
             }
         }

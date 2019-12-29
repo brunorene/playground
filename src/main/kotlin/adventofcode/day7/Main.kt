@@ -16,11 +16,11 @@ fun main() {
 }
 
 private suspend fun channels(order: List<Long>) = listOf(
-        Channel<Long>(10000).apply { send(order[0]); send(0) },
-        Channel<Long>(10000).apply { send(order[1]) },
-        Channel<Long>(10000).apply { send(order[2]) },
-        Channel<Long>(10000).apply { send(order[3]) },
-        Channel<Long>(10000).apply { send(order[4]) }
+        Channel<Pair<Unit, Long>>(10000).apply { send(Unit to order[0]); send(Unit to 0) },
+        Channel<Pair<Unit, Long>>(10000).apply { send(Unit to order[1]) },
+        Channel<Pair<Unit, Long>>(10000).apply { send(Unit to order[2]) },
+        Channel<Pair<Unit, Long>>(10000).apply { send(Unit to order[3]) },
+        Channel<Pair<Unit, Long>>(10000).apply { send(Unit to order[4]) }
 )
 
 fun day7star1() {
@@ -30,11 +30,11 @@ fun day7star1() {
         runBlocking {
             val channels = channels(order)
             GlobalScope.async {
-                computer(originalCode.toMutableMap(), channels[0]) { out -> channels[1].send(out) }
-                computer(originalCode.toMutableMap(), channels[1]) { out -> channels[2].send(out) }
-                computer(originalCode.toMutableMap(), channels[2]) { out -> channels[3].send(out) }
-                computer(originalCode.toMutableMap(), channels[3]) { out -> channels[4].send(out) }
-                computer(originalCode.toMutableMap(), channels[4]) { out -> result = out }
+                computer(originalCode.toMutableMap(), channels[0]) { (out, _) -> channels[1].send(Unit to out) }
+                computer(originalCode.toMutableMap(), channels[1]) { (out, _) -> channels[2].send(Unit to out) }
+                computer(originalCode.toMutableMap(), channels[2]) { (out, _) -> channels[3].send(Unit to out) }
+                computer(originalCode.toMutableMap(), channels[3]) { (out, _) -> channels[4].send(Unit to out) }
+                computer(originalCode.toMutableMap(), channels[4]) { (out, _) -> result = out }
                 result
             }
         }
@@ -48,12 +48,12 @@ fun day7star2() {
         runBlocking {
             val channels = channels(order)
             with(GlobalScope) {
-                launch { computer(originalCode.toMutableMap(), channels[0]) { channels[1].send(it) } }
-                launch { computer(originalCode.toMutableMap(), channels[1]) { channels[2].send(it) } }
-                launch { computer(originalCode.toMutableMap(), channels[2]) { channels[3].send(it) } }
-                launch { computer(originalCode.toMutableMap(), channels[3]) { channels[4].send(it) } }
+                launch { computer(originalCode.toMutableMap(), channels[0]) { (out, _) -> channels[1].send(Unit to out) } }
+                launch { computer(originalCode.toMutableMap(), channels[1]) { (out, _) -> channels[2].send(Unit to out) } }
+                launch { computer(originalCode.toMutableMap(), channels[2]) { (out, _) -> channels[3].send(Unit to out) } }
+                launch { computer(originalCode.toMutableMap(), channels[3]) { (out, _) -> channels[4].send(Unit to out) } }
                 async {
-                    computer(originalCode.toMutableMap(), channels[4]) { channels[0].send(it); result = it }
+                    computer(originalCode.toMutableMap(), channels[4]) { (out, _) -> channels[0].send(Unit to out); result = out }
                     result
                 }
             }

@@ -34,4 +34,14 @@ fun day16star1() {
 }
 
 fun day16star2() {
+    var freq = readFrequency()
+    freq = (1..10000).flatMap { freq }
+    (0 until 100).map {
+        if(it% 10 == 0) println("step: $it")
+        freq = freq.indices.map { index ->
+            val patt = basePattern(index, freq.size)
+            abs(freq.zip(patt).map { (f, p) -> f * p }.sum() % 10)
+        }
+    }
+    println(freq.take(8).joinToString(""))
 }
