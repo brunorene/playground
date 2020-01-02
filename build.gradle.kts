@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.50"
+    kotlin("jvm") version "1.3.61"
     application
 }
 
 application {
-    mainClassName = "adventofcode.day15.MainKt"
+    mainClassName = "adventofcode.day16.MainKt"
 }
 
 repositories {

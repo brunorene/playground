@@ -3,9 +3,12 @@ package adventofcode.day16
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.ceil
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTime
 
+@ExperimentalTime
 fun main() {
-    day16star1()
+//    day16star1()
     day16star2()
 }
 
@@ -13,35 +16,47 @@ fun readFrequency() = File("day16.txt")
         .readText()
         .map { it.toString().toLong() }
 
-fun basePattern(index: Int, length: Int): List<Long> {
-    val pattern = (0..index).map { 0L } +
-            (0..index).map { 1L } +
-            (0..index).map { 0L } +
-            (0..index).map { -1L }
-    val repeat = ceil(length.toDouble() / pattern.size.toDouble()).toLong() + 1L
-    return (1..repeat).flatMap { pattern }.drop(1).take(length)
+fun basePattern(index: Int, length: Int): List<Byte> {
+    val list0 = mutableListOf<Byte>()
+    val list1 = mutableListOf<Byte>()
+    val listMinus1 = mutableListOf<Byte>()
+    repeat(index + 1) {
+        list0.add(0)
+        list1.add(1)
+        listMinus1.add(-1)
+    }
+    val repeat = ceil(length.toDouble() / ((index + 1) * 4)).toLong() + 1L
+    return (1..repeat).flatMap { list0 + list1 + list0 + listMinus1 }
 }
 
-fun day16star1() {
-    var freq = readFrequency()
-    (0 until 100).map {
+private fun fft(input: List<Long>): List<Long> {
+    var freq = input
+    val patterns = freq.indices.associateWith { basePattern(it, freq.size) }
+    (0 until 100).forEach {
+        println("phase $it")
         freq = freq.indices.map { index ->
-            val patt = basePattern(index, freq.size)
-            abs(freq.zip(patt).map { (f, p) -> f * p }.sum() % 10)
+            var sum = 0L
+            for (fIdx in index until freq.size) {
+                sum += patterns[index]!![fIdx + 1] * freq[fIdx]
+            }
+            abs(sum % 10)
         }
     }
-    println(freq.take(8).joinToString(""))
+    return freq
+}
+
+@ExperimentalTime
+fun day16star1() {
+    val howLong = measureTime {
+        val result = fft(readFrequency())
+        println(result.take(8).joinToString(""))
+    }
+    println("it took $howLong")
 }
 
 fun day16star2() {
-    var freq = readFrequency()
-    freq = (1..10000).flatMap { freq }
-    (0 until 100).map {
-        if(it% 10 == 0) println("step: $it")
-        freq = freq.indices.map { index ->
-            val patt = basePattern(index, freq.size)
-            abs(freq.zip(patt).map { (f, p) -> f * p }.sum() % 10)
-        }
-    }
-    println(freq.take(8).joinToString(""))
+    val freq = readFrequency()
+    val result = fft((1..10000).flatMap { freq })
+    val offset = result.take(7).joinToString("").toInt()
+    println(result.drop(offset).take(8).joinToString(""))
 }
