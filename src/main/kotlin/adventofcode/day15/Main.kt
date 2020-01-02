@@ -5,12 +5,34 @@ import adventofcode.day5.readProgram
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.util.*
+import kotlin.system.exitProcess
 
 typealias Depth = Int
 
+val hasOxygen = mutableSetOf<Point>()
+
+fun fillWithO2(center: Point, minutes: Int): Int = allDirections
+        .map { center.nextPosition(it) }
+        .map { it to hull[it] }
+        .filter { it.second?.tile != Wall && !hasOxygen.contains(it.first) }
+        .let { next ->
+            next.map {
+                hasOxygen.add(center)
+                fillWithO2(it.first, minutes + 1)
+            }.max() ?: minutes
+        }
+
+val day15star2 = { oxygenData: Pair<Point, PositionData>? ->
+    if (oxygenData != null) {
+        println("oxygen station $oxygenData")
+        println("minutes ${fillWithO2(oxygenData.first, 0)}")
+    }
+    exitProcess(0)
+}
+
 fun main() {
-    day15star1()
-    day15star2()
+    day15star1(day15star2)
 }
 
 data class Point(val x: Long = 0, val y: Long = 0) {
@@ -21,10 +43,6 @@ data class Point(val x: Long = 0, val y: Long = 0) {
         West -> Point(x - 1, y)
         East -> Point(x + 1, y)
     }
-
-    fun neighbours() = listOf(North, South, East, West)
-            .filter { hull[nextPosition(it)]?.second !in listOf(Wall, DeadEnd) }
-            .map { it to nextPosition(it) }
 }
 
 sealed class Tile(val char: Char) {
@@ -34,8 +52,7 @@ sealed class Tile(val char: Char) {
 object Wall : Tile('#')
 object Empty : Tile('.')
 object Oxygen : Tile('X')
-object Unknown : Tile(' ')
-object DeadEnd : Tile('D')
+object Start : Tile('@')
 
 fun tile(id: Long) = when (id) {
     0L -> Wall
@@ -46,78 +63,103 @@ fun tile(id: Long) = when (id) {
 
 sealed class Direction(val id: Long) {
     override fun toString(): String = javaClass.simpleName
+
+    abstract fun reverse(): Direction
 }
 
-object North : Direction(1)
-object South : Direction(2)
-object West : Direction(3)
-object East : Direction(4)
+object North : Direction(1) {
+    override fun reverse() = South
+}
 
-private val hull = mutableMapOf<Point, Pair<Depth, Tile>>()
+object South : Direction(2) {
+    override fun reverse() = North
+}
 
-fun Point.isDeadEnd() = neighbours().count { hull[it.second]?.second in setOf(DeadEnd, Wall) } == 3
+object West : Direction(3) {
+    override fun reverse() = East
+}
 
-fun MutableMap<Point, Pair<Depth, Tile>>.draw() {
+object East : Direction(4) {
+    override fun reverse() = West
+}
+
+private val allDirections = listOf(North, South, East, West)
+
+data class PositionData(
+        val direction: Direction,
+        val depth: Depth,
+        val tile: Tile
+)
+
+private val hull = mutableMapOf<Point, PositionData>()
+fun MutableMap<Point, PositionData>.depth(p: Point) = get(p)?.depth ?: 0
+
+fun MutableMap<Point, PositionData>.draw(p: Pair<Point, PositionData>?) {
     File("hull.draw").bufferedWriter().use { writer ->
+        if (p != null) {
+            writer.write(p.toString())
+            writer.newLine()
+        }
         ((keys.map { it.y }.min() ?: 0)..(keys.map { it.y }.max() ?: 0)).forEach { y ->
             ((keys.map { it.x }.min() ?: 0)..(keys.map { it.x }.max() ?: 0)).forEach { x ->
-                writer.write(hull[Point(x, y)]?.second?.char.toString())
+                writer.write((hull[Point(x, y)]?.tile?.char ?: ' ').toInt())
             }
             writer.newLine()
         }
     }
 }
 
-fun Pair<Direction, Point>.backtrack() = when (first) {
-    North -> Point(second.x, second.y + 1)
-    South -> Point(second.x, second.y - 1)
-    West -> Point(second.x + 1, second.y)
-    East -> Point(second.x - 1, second.y)
-}
+fun MutableMap<Point, PositionData>.allFound() = filter { it.value.tile in listOf(Empty, Start) }
+        .all { data ->
+            allDirections.all { direction -> this.containsKey(data.key.nextPosition(direction)) }
+        }
 
-fun Pair<Direction, Point>.neighbours() = listOf(North, South, East, West)
-        .filter { first != it && hull[second.nextPosition(it)]?.second !in listOf(Wall, DeadEnd) }
-        .map { it to second.nextPosition(it) }
-
-fun day15star1() {
+fun day15star1(day2: (Pair<Point, PositionData>?) -> Unit) {
     runBlocking {
         val memory = readProgram(File("day15.txt"))
-        hull[Point()] = 0 to Empty
-        val channel = Channel<Pair<Pair<Direction, Point>, Long>>(1024)
-        Point().neighbours().forEach { channel.send(it to it.first.id) }
+        val channel = Channel<Pair<Direction, Long>>(1024)
+        var currentPoint = Point()
+        var oxygenPoint: Pair<Point, PositionData>? = null
+        hull[Point()] = PositionData(South, 0, Start)
+        val queue = LinkedList<Direction>().apply { addAll(allDirections) }
+        queue.pop().also { channel.send(it to it.id) }
         computer(memory, channel) { (tileCode, stack) ->
-            val nextPosData = stack.pop()
-            print(nextPosData)
-            if (hull[nextPosData.second]?.second == Unknown)
-                when (tile(tileCode)) {
-                    Wall -> {
-                        println(" Wall")
-                        hull[nextPosData.second] = -1 to Wall
-                        val previous = nextPosData.backtrack()
-                        if (previous.isDeadEnd()) {
-                            val backtrack = previous.neighbours().first()
-                            hull[previous] = -1 to DeadEnd
-                            channel.send(backtrack to backtrack.first.id)
-                        }
-                    }
-                    Empty -> {
-                        println(" Empty")
-                        hull[nextPosData.second] = ((hull[nextPosData.backtrack()]?.first ?: 0) + 1) to Empty
-                        nextPosData.neighbours()
-                                .filter { hull[it.second]?.second == Unknown }
-                                .map { neighbour -> channel.send(neighbour to neighbour.first.id) }
-                    }
-                    Oxygen -> {
-                        println(" Oxygen")
-                        hull[nextPosData.second] = ((hull[nextPosData.backtrack()]?.first ?: 0) + 1) to Oxygen
-                        println("Found Oxygen Station on ${hull[nextPosData.second]}")
-                    }
+            val nextDirection = stack.pop()
+            val nextPoint = currentPoint.nextPosition(nextDirection)
+            when (tile(tileCode)) {
+                Wall -> {
+                    hull[nextPoint] = PositionData(
+                            nextDirection,
+                            hull.depth(currentPoint) + 1,
+                            Wall
+                    )
                 }
+                Empty, Oxygen -> {
+                    val data = PositionData(
+                            nextDirection,
+                            hull.depth(currentPoint) + 1,
+                            tile(tileCode)
+                    )
+                    hull.putIfAbsent(nextPoint, data)
+                    if (tile(tileCode) == Oxygen) oxygenPoint = nextPoint to data
+                    currentPoint = nextPoint
+                    queue.clear()
+                    queue.addAll(allDirections
+                            .filter { !hull.containsKey(currentPoint.nextPosition(it)) && it != nextDirection.reverse() })
+                }
+            }
+            if (queue.isEmpty()) {
+                val randomDirection = allDirections
+                        .filter { hull[currentPoint.nextPosition(it)]?.tile != Wall }
+                        .random()
+                channel.send(randomDirection to randomDirection.id)
+            } else {
+                queue.pop().also { channel.send(it to it.id) }
+            }
+            if (hull.allFound()) {
+                hull.draw(oxygenPoint)
+                day2(oxygenPoint)
+            }
         }
     }
-    hull.draw()
-}
-
-fun day15star2() {
-    println("Ola 2")
 }
