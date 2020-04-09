@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.61"
+    kotlin("jvm") version "1.3.70"
     application
 }
 
 application {
-    mainClassName = "adventofcode.day16.MainKt"
+    mainClassName = "hackerrank.FlatlandSpaceStationsKt"
 }
 
 repositories {
@@ -23,7 +23,7 @@ dependencies {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
         freeCompilerArgs = listOf("-Xjsr305=strict")
     }
 }
