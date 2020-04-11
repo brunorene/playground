@@ -6,7 +6,7 @@ plugins {
 }
 
 application {
-    mainClassName = "hackerrank.FlatlandSpaceStationsKt"
+    mainClassName = "hackerrank.FairRationsKt"
 }
 
 repositories {
